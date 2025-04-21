@@ -1,0 +1,39 @@
+
+1. Clone the GitHub repository
+
+git clone https://github.com/username/repo-name.git
+cd repo-name
+
+2. Add GitLab as a second remote
+
+git remote add gitlab https://gitlab.com/username/repo-name.git
+You can verify with:
+git remote -v
+
+3. Create a new branch (optional if already working in one)
+
+git checkout -b new-branch-name
+
+
+4. Push to GitLab as a new branch
+
+git push gitlab new-branch-name
+This pushes the current branch to GitLab under that branch name.
+
+5. Optional: Push tags or all branches
+If needed:
+
+git push gitlab --tags     # Push tags
+git push gitlab --all      # Push all branches
+
+✅ Example scenario:
+You updated main on GitHub and want it as updated-main in GitLab:
+
+bash
+Copy
+git clone https://github.com/user/repo.git
+cd repo
+git remote add gitlab https://gitlab.com/user/repo.git
+git checkout -b updated-main
+git push gitlab upgithdated-main
+
