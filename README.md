@@ -96,3 +96,120 @@ nc -zv <primary-IP> 5432
 
 
 
+
+
+
+
+
+
+
+
+
+How to Start PostgreSQL Manually (without systemctl)
+✅ Step 1: Locate the PostgreSQL Data Directory
+This is where the database stores its files. Common locations:
+
+/var/lib/postgresql/14/main
+
+/usr/local/pgsql/data
+
+Your custom path (check postgresql.conf or ask your admin)
+
+If unsure, try:
+
+bash
+Copy
+Edit
+ps -ef | grep [p]ostgres
+Look for a line like:
+
+bash
+Copy
+Edit
+postgres -D /var/lib/postgresql/14/main
+✅ Step 2: Start PostgreSQL
+bash
+Copy
+Edit
+pg_ctl -D /path/to/data_directory start
+Example:
+
+bash
+Copy
+Edit
+pg_ctl -D /var/lib/postgresql/14/main start
+You should see:
+
+text
+Copy
+Edit
+server starting
+Then verify:
+
+bash
+Copy
+Edit
+ps -ef | grep [p]ostgres
+🔴 How to Stop PostgreSQL
+bash
+Copy
+Edit
+pg_ctl -D /path/to/data_directory stop
+You can use shutdown modes:
+
+-m smart (waits for clients to disconnect – default)
+
+-m fast (recommended – safely terminates sessions)
+
+-m immediate (dangerous – abrupt shutdown)
+
+Example:
+
+bash
+Copy
+Edit
+pg_ctl -D /var/lib/postgresql/14/main stop -m fast
+🔄 How to Restart PostgreSQL
+bash
+Copy
+Edit
+pg_ctl -D /path/to/data_directory restart -m fast
+🧪 Verify PostgreSQL Status
+bash
+Copy
+Edit
+pg_ctl -D /path/to/data_directory status
+✅ Will tell you whether it's running and show the PID.
+
+📝 Notes
+You must be the PostgreSQL OS user (usually postgres) to run these commands.
+
+If pg_ctl is not in your PATH, try:
+
+bash
+Copy
+Edit
+/usr/pgsql-14/bin/pg_ctl -D /your/data/dir start
+Or add it:
+
+bash
+Copy
+Edit
+export PATH=$PATH:/usr/pgsql-14/bin
+Would you like a custom script that can start/stop PostgreSQL manually for your setup?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
