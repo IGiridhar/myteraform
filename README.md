@@ -96,3 +96,37 @@ Base Backups: Take regular base backups in addition to WAL archiving. This speed
 Backup Retention: Have a policy for how long to keep base backups and WAL files.
 Testing: Test your recovery process regularly!
 PostgreSQL 17: PostgreSQL 17 has improvements, including incremental backups, which can make backups more efficient. Investigate those for a long-term strategy.
+
+
+
+
+
+
+
+
+
+
+•	DataStax Cassandra database administration
+	Provision Google Compute engines using terraform.
+	Install, configure and maintain DataStax Enterprise (DSE) clusters across multiple environments using Ansible.
+	Implement and manage backup and restore procedures.
+	Manage user roles, permissions, and authentication mechanisms.
+	Monitor for security vulnerabilities and apply patches or updates as needed.
+	Plan and execute version upgrades to benefit from the latest features and performance improvements.
+	Address and resolve node failures, data inconsistencies, or any operational incidents.
+	Coordinate with DataStax support for complex issues and guidance.
+	Document cluster architectures, configurations, procedures, and best practices.
+	Share knowledge and provide training to team members on Cassandra and DataStax best practices.
+
+•	Cloudera Hadoop and Kafka administration
+	Install and configure Cloudera Hadoop clusters using Cloudera Manager, Terraform and Ansible
+	Perform daily operations like monitoring the cluster using Cloudera manager.
+	Collaborated with Cloudera support to resolve complex issues.
+
+•	Hana Database administration
+	Acquired extensive knowledge and hands-on experience in HANA database management over the last 6 months, demonstrating readiness to support the HANA database team as needed.
+	Led training programs for non-HANA DBA team members, equipping them with essential SAP HANA database administration skills and best practices to enhance their expertise.
+
+•	MemoryStore (Redis) Database administration
+	Manage and resolve issues with Redis Memory Store provisioning and management, acting as the primary contact for the application team regarding Redis Memory Store instances.
+
