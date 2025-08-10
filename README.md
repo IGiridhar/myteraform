@@ -1,3 +1,6 @@
+
+sudo find / -type f -name "spring-security-crypto-*.jar" 2>/dev/null
+
 Here's a detailed guide on configuring Point-in-Time Recovery (PITR) in PostgreSQL 17 with a master and standby setup:
 Understanding PITR
 PostgreSQL's Point-in-Time Recovery (PITR) lets you restore your database to a specific point in time. It works by combining:
