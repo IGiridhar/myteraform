@@ -1,3 +1,11 @@
+
+
+sudo find / -type f -name "java" -perm /111 2>/dev/null | grep -E "/bin/java$"
+
+for j in $(sudo find / -type f -name "java" -perm /111 2>/dev/null | grep -E "/bin/java$"); do
+    echo "$j => $($j -version 2>&1 | head -n 1)"
+done
+
 find / -type f -name java -executable -exec {} -version \; 2>/dev/null
 
 sudo find / -type f -name "spring-security-crypto-*.jar" 2>/dev/null
