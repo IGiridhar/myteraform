@@ -1,3 +1,4 @@
+find / -type f -name java -executable -exec {} -version \; 2>/dev/null
 
 sudo find / -type f -name "spring-security-crypto-*.jar" 2>/dev/null
 
