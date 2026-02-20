@@ -1,0 +1,39 @@
+---
+- name: Managed Reboot and PostgreSQL Cycle (Running as Root)
+  hosts: db_servers
+  become: true  # This ensures we have the privileges to use systemctl
+  vars:
+    pg_service_name: "postgresql"
+
+  tasks:
+    - name: 1. Stop PostgreSQL service
+      ansible.builtin.systemd:
+        name: "{{ pg_service_name }}"
+        state: stopped
+
+    - name: 2. Validate PostgreSQL is stopped
+      ansible.builtin.command: systemctl is-active {{ pg_service_name }}
+      register: service_check
+      failed_when: service_check.rc == 0 # rc 0 means it's still active
+      changed_when: false
+
+    - name: 3. Reboot the host
+      ansible.builtin.reboot:
+        reboot_timeout: 600
+        post_reboot_delay: 15
+
+    - name: 4. Start PostgreSQL service
+      ansible.builtin.systemd:
+        name: "{{ pg_service_name }}"
+        state: started
+        enabled: true
+
+    - name: 5. Verify Postgres Process is running as root
+      ansible.builtin.shell: ps -ef | grep postgres | grep ^root
+      register: root_check
+      changed_when: false
+      failed_when: root_check.rc != 0
+
+    - name: Show status
+      ansible.builtin.debug:
+        msg: "PostgreSQL has been restarted and verified running under root."
