@@ -1,0 +1,49 @@
+---
+- name: Manual Restart of DataStax OpsCenter via Kill
+  hosts: opscenter_servers
+  become: yes
+  vars:
+    opscenter_path: "/opt/opscenter" # Adjust if your folder name differs
+
+  tasks:
+    - name: 1. Find OpsCenter process ID
+      ansible.builtin.command: pgrep -f "opscenterd"
+      register: ops_pid
+      failed_when: false
+      changed_when: false
+
+    - name: 2. Stop OpsCenter (Kill process)
+      ansible.builtin.shell: "pkill -9 -f opscenterd"
+      when: ops_pid.rc == 0
+      ignore_errors: yes
+
+    - name: 3. Verify process is gone
+      ansible.builtin.command: pgrep -f "opscenterd"
+      register: stop_check
+      failed_when: stop_check.rc == 0
+      changed_when: false
+
+    - name: 4. Reboot the host
+      ansible.builtin.reboot:
+        reboot_timeout: 600
+        post_reboot_delay: 30
+
+    - name: 5. Start OpsCenter manually
+      ansible.builtin.shell: "nohup {{ opscenter_path }}/bin/opscenter > /dev/null 2>&1 &"
+      async: 10
+      poll: 0
+      # Using nohup and async because manual binaries often hang the SSH session
+
+    - name: 6. Wait for OpsCenter to initialize
+      ansible.builtin.pause:
+        seconds: 15
+
+    - name: 7. Final status check (Check for PID)
+      ansible.builtin.command: pgrep -f "opscenterd"
+      register: final_status
+      changed_when: false
+
+    - name: Report Status
+      ansible.builtin.debug:
+        msg: "OpsCenter is running with PID {{ final_status.stdout }}"
+      when: final_status.rc == 0
