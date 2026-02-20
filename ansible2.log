@@ -1,0 +1,68 @@
+---
+- name: Managed DSE and Agent Lifecycle (Tarball)
+  hosts: dse_nodes
+  become: yes
+  become_user: cassandra
+  vars:
+    dse_root: "/app/cassandra/dse-6.9.14"
+    # Action can be 'restart' or 'stop'
+    target_action: "restart"
+
+  tasks:
+    # --- STOP PHASE ---
+    
+    - name: 1. Request DSE to stop gracefully
+      ansible.builtin.shell: "{{ dse_root }}/bin/dse cassandra-stop"
+      failed_when: false
+
+    - name: 2. Find any remaining DSE or Agent PIDs
+      ansible.builtin.shell: "pgrep -u cassandra -f '{{ item }}'"
+      loop:
+        - "DseModule"
+        - "datastax-agent.*standalone.jar"
+      register: pids_to_kill
+      failed_when: false
+      changed_when: false
+
+    - name: 3. Force Kill remaining processes (SIGKILL)
+      ansible.builtin.shell: "kill -9 {{ item.stdout }}"
+      loop: "{{ pids_to_kill.results }}"
+      when: item.stdout != ""
+
+    # --- START PHASE ---
+
+    - name: 4. Start DSE Cassandra
+      ansible.builtin.shell: "nohup {{ dse_root }}/bin/dse cassandra > {{ dse_root }}/dse_launch.log 2>&1 &"
+      when: target_action == "restart"
+      async: 60
+      poll: 0
+
+    - name: 5. Start DataStax Agent
+      ansible.builtin.shell: "nohup {{ dse_root }}/bin/datastax-agent > {{ dse_root }}/agent_launch.log 2>&1 &"
+      when: target_action == "restart"
+      async: 30
+      poll: 0
+
+    # --- VALIDATION PHASE ---
+
+    - name: 6. Wait for DSE process to appear
+      ansible.builtin.shell: "pgrep -u cassandra -f 'DseModule'"
+      register: dse_check
+      until: dse_check.rc == 0
+      retries: 10
+      delay: 5
+      when: target_action == "restart"
+      changed_when: false
+
+    - name: 7. Get Agent Status
+      ansible.builtin.shell: "pgrep -u cassandra -f 'datastax-agent.*standalone.jar'"
+      register: agent_check
+      failed_when: false
+      changed_when: false
+      when: target_action == "restart"
+
+    - name: Final Status Report
+      ansible.builtin.debug:
+        msg:
+          - "DSE Status: {{ 'RUNNING' if dse_check.rc == 0 else 'NOT STARTED' }}"
+          - "Agent Status: {{ 'RUNNING' if agent_check.rc == 0 else 'NOT STARTED' }}"
