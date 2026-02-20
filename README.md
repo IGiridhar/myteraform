@@ -1,66 +1,43 @@
-RHEL Monthly Patching
-1. Prerequisite Infrastructure Setup
-Mount a NFS drive as specified below on all hosts. 
-•	Capacity: 500GB of NFS storage per environment.
-•	Mount Point: Standardized as /repo/rhel on every server.
-•	Permissions:
-o	On bastion host: Mount as rw (Read-Write) to perform syncs and extractions.
-o	On all DB hosts: Mount as ro (Read-Only) to prevent accidental tampering.
-1.2 Detailed Directory Structure Line Diagram
-The following structure must be maintained on the NFS mount to ensure that dnf can resolve the metadata for both core OS packages and modular application streams.
- 
-________________________________________
- 
-2. Phase 1: Monthly Repository Sync (QA)
-Performed once a month on the QA Build Server.
-1.	Prepare Variables:
-•	export REL_VER="8.10" # Switch to 8.7 as needed
-•	export SNAP_DATE=$(date +%Y-%m-%d)
-•	export BASE_DIR="/repo/rhel/$REL_VER/snapshots/$SNAP_DATE"
-•	sudo mkdir -p $BASE_DIR
-2.	Sync Packages from Red Hat CDN:
-•	sudo subscription-manager release --set=$REL_VER
-•	sudo reposync -p $BASE_DIR --download-metadata --repo=rhel-8-for-x86_64-baseos-rpms
-•	sudo reposync -p $BASE_DIR --download-metadata --repo=rhel-8-for-x86_64-appstream-rpms
-3.	Update QA Symlink:
-•	sudo ln -sfn $BASE_DIR /repo/rhel/$REL_VER/current
+---
+- name: Manage DSE Agent for Cassandra User
+  hosts: dse_nodes
+  vars:
+    # Set this to the absolute path of your agent's bin directory
+    agent_bin_path: "/home/cassandra/datastax-agent/bin/datastax-agent"
+    # Action options: stop, start, restart
+    action: restart
 
-3. Phase 2: QA Validation
-Performed on QA Client Servers.
-1.	Execute Update:
-sudo dnf clean all && sudo dnf update -y
-2.	Capture Parity Audit:
-find /repo/rhel/$REL_VER/snapshots/$SNAP_DATE -name "*.rpm" | wc -l > /repo/rhel/$REL_VER/snapshots/$SNAP_DATE/qa_count.txt
-4. Phase 3: Tarball Bridge Migration
-Securely move the data to the isolated Production NFS.
-1.	Pack (QA Side):
-cd /repo/rhel/$REL_VER/snapshots/
-tar -czpf rhel_${REL_VER}_${SNAP_DATE}.tar.gz $SNAP_DATE/
-sha256sum rhel_${REL_VER}_${SNAP_DATE}.tar.gz > rhel_${REL_VER}_${SNAP_DATE}.sha256
-2.	Unpack (Prod Side): After transferring the files to the Production environment:
-Bash
-# Verify file integrity
-sha256sum -c rhel_${REL_VER}_${SNAP_DATE}.sha256
+  tasks:
+    - name: Find the PID of the Datastax Agent
+      # Search for the jar file in the process list
+      ansible.builtin.shell: "pgrep -u cassandra -f 'datastax-agent.*standalone.jar'"
+      register: agent_pid
+      failed_when: false
+      changed_when: false
 
-# Extract to Prod NFS
-sudo tar -xzf rhel_${REL_VER}_${SNAP_DATE}.tar.gz -C /repo/rhel/$REL_VER/snapshots/
-3.	Promote (Update Prod Symlink):
-Bash
-sudo ln -sfn /repo/rhel/$REL_VER/snapshots/$SNAP_DATE /repo/rhel/$REL_VER/current
-________________________________________
-5. Phase 4: Production Execution
-Performed on Production Client Servers.
-1.	Verification Check:
-Bash
-# This count must match the number inside qa_count.txt
-find /repo/rhel/$REL_VER/snapshots/$SNAP_DATE -name "*.rpm" | wc -l
-2.	Execute Patching:
-Bash
-sudo dnf clean all && sudo dnf update -y
-________________________________________
-6. Maintenance & Retention
-•	Cleanup: Delete .tar.gz and .sha256 files immediately after extraction to save space.
-•	Snapshot Retention: Run this monthly to keep a rolling 90-day history.
-Bash
-find /repo/rhel/8.10/snapshots/ -maxdepth 1 -type d -mtime +90 -exec rm -rf {} +
+    - name: Kill the Agent process (SIGKILL)
+      ansible.builtin.shell: "kill -9 {{ item }}"
+      loop: "{{ agent_pid.stdout_lines }}"
+      when: 
+        - (action == 'stop' or action == 'restart')
+        - agent_pid.stdout != ""
+      become: yes
+      become_user: cassandra
 
+    - name: Start the Agent as Cassandra user
+      # Use nohup and redirect output to ensure it stays running after Ansible exits
+      ansible.builtin.shell: "nohup {{ agent_bin_path }} > /home/cassandra/agent_launch.log 2>&1 &"
+      when: action == 'start' or action == 'restart'
+      become: yes
+      become_user: cassandra
+      async: 10
+      poll: 0
+
+    - name: Verify the process is running
+      ansible.builtin.shell: "pgrep -u cassandra -f 'datastax-agent.*standalone.jar'"
+      register: verify_pid
+      until: verify_pid.rc == 0
+      retries: 5
+      delay: 2
+      when: action == 'start' or action == 'restart'
+      changed_when: false
