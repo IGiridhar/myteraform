@@ -2,14 +2,11 @@
 - name: Manage DSE Agent for Cassandra User
   hosts: dse_nodes
   vars:
-    # Set this to the absolute path of your agent's bin directory
     agent_bin_path: "/home/cassandra/datastax-agent/bin/datastax-agent"
-    # Action options: stop, start, restart
     action: restart
 
   tasks:
     - name: Find the PID of the Datastax Agent
-      # Search for the jar file in the process list
       ansible.builtin.shell: "pgrep -u cassandra -f 'datastax-agent.*standalone.jar'"
       register: agent_pid
       failed_when: false
@@ -25,7 +22,6 @@
       become_user: cassandra
 
     - name: Start the Agent as Cassandra user
-      # Use nohup and redirect output to ensure it stays running after Ansible exits
       ansible.builtin.shell: "nohup {{ agent_bin_path }} > /home/cassandra/agent_launch.log 2>&1 &"
       when: action == 'start' or action == 'restart'
       become: yes
